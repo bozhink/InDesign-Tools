@@ -16,6 +16,9 @@
             'MycoBank': {
                 '(.+)': 'http://www.mycobank.org/MycoTaxo.aspx?Link=T&Rec=$1'
             },
+            'FungalNames': {
+                '.*?(\\d+)': 'http://fungalinfo.im.ac.cn/fungalname/fungalexample.html?fn=$1'
+            },
             'IndexFungorum': {
                 'IF(\\d+)': 'http://www.indexfungorum.org/names/NamesRecord.asp?RecordID=$1'
             },
