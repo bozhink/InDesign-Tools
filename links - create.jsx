@@ -1,4 +1,5 @@
-﻿(function (app) {
+﻿/* globals NothingEnum */
+(function (app) {
     'use strict';
 
     var document,
@@ -85,33 +86,35 @@
             }
         },
         pattern,
-        patterns = {
-            '(?i)\\bdoi:?\\s*(\\d[^\\s]+?)(?=[,\.]?[\\s]|$)': {
-                'doi:?\\s*(\\d[^\\s]+)': 'https://doi.org/$1'
+        harvestPatterns = {
+            '(?i)\\bdoi:?\\s*\\d\\S+': {
+                '(?i)doi:?\\s*(\\d\\S+)': 'https://doi.org/$1'
             },
-            '(https?://(www)?)([^\\s]+?)(?=[>]?[\]]?[,\.]?[;\)\\s]|[\.;\)]$|$)': {
+            '(?i)(https?|s?ftp)://\\S+': {
                 '.*': '$0'
             },
-            '(?<!://)(www)([^\\s]+?)(?=[>]?[\]]?[,\.]?[;\)\\s]|[\.;\)]$|$)': {
+            '(?i)(?<!://)(www)(\\S+)': {
                 '.*': 'http://$0'
-            },
+            }
+        },
+        patterns = {
             '(?i)\\b[A-Z0-9\._%+-]+@[A-Z0-9\.-]+\\.[A-Z]{2,4}\\b': {
                 '.*': 'mailto:$0'
             },
-            '(?<=\\s)urn:lsid:ipni.org:names:\\S+(?=\\s)': {
+            '(?<=\\s)urn:lsid:ipni.org:names:\\S+': {
                 '.+': 'http://ipni.org/$0'
             },
             '(?<=\\s)urn:lsid:biosci.ohio-state.edu:osuc_pubs:\\d+\\b': {
                 '.+': 'http://lsid.tdwg.org/$0'
             },
-            '(?<=\\s)urn:lsid:biocol.org:col::\\S+\\b': {
+            '(?<=\\s)urn:lsid:biocol.org:col::\\S+': {
                 '.+': 'http://biocol.org/$0'
             },
-            '\\b[Pp][Mm][Ii][Dd]:?(\\d+)\\b': {
-                '[Pp][Mm][Ii][Dd]:?(\\d+)': 'http://www.ncbi.nlm.nih.gov/pubmed/$1'
+            '(?i)\\bPMID:?\\s*\\d+': {
+                '(?i)PMID:?\\s*(\\d+)': 'http://www.ncbi.nlm.nih.gov/pubmed/$1'
             },
-            '\\b[Pp][Mm][Cc][Ii][Dd]:?(\\d+)\\b': {
-                '[Pp][Mm][Cc][Ii][Dd]:?(\\d+)': 'http://www.ncbi.nlm.nih.gov/pmc/articles/PMC$1'
+            '(?i)\\bPMCID:?\\s*\\d+': {
+                '(?i)PMCID:?\\s*(\\d+)': 'http://www.ncbi.nlm.nih.gov/pmc/articles/PMC$1'
             }
         };
 
@@ -120,6 +123,14 @@
             document = app.activeDocument;
 
             removeHyperlinks(document);
+
+            for (pattern in harvestPatterns) {
+                try {
+                    makeLinksByHarvestPattern(app, document, pattern, harvestPatterns[pattern]);
+                } catch (e) {
+                    // $.writeln(e);
+                }
+            }
 
             for (pattern in patterns) {
                 try {
@@ -155,6 +166,11 @@
         app.findChangeGrepOptions.includeLockedLayersForFind = true;
         app.findChangeGrepOptions.includeLockedStoriesForFind = true;
         app.findChangeGrepOptions.includeMasterPages = true;
+    }
+
+    function setTextPreferences(app) {
+        app.findTextPreferences = NothingEnum.nothing;
+        app.changeTextPreferences = NothingEnum.nothing;
     }
 
     function removeHyperlinks(document) {
@@ -206,6 +222,46 @@
         for (i = 0; i < foundItems.length; i += 1) {
             for (pattern in patterns) {
                 processSingleItemFoundByGrep(document, foundItems[i], i, pattern, patterns[pattern]);
+            }
+        }
+    }
+
+    function makeLinksByHarvestPattern(app, document, grepHarvestPattern, patterns) {
+        var item, items = {},
+            foundItem, foundItems, numberOffoundItems, pattern, i;
+
+        setGrepPreferences(app);
+        app.findGrepPreferences.findWhat = grepHarvestPattern;
+
+        foundItems = document.findGrep();
+
+        numberOffoundItems = foundItems.length;
+        if (numberOffoundItems < 1) {
+            return;
+        }
+
+        for (i = 0; i < numberOffoundItems; i += 1) {
+            foundItem = foundItems[i];
+            if (foundItem) {
+                item = foundItem.contents.toString().replace(/^[\s<>]+|[\s<>,;:\.\(\)\[\]\{\}]+$/g, '');
+                if (item !== '' && !(item in items)) {
+                    items[item] = item;
+                }
+            }
+        }
+
+        for (item in items) {
+            setTextPreferences(app);
+            app.findTextPreferences.findWhat = item;
+            foundItems = document.findText();
+            numberOffoundItems = foundItems.length;
+            if (numberOffoundItems > 0) {
+                for (i = 0; i < numberOffoundItems; i += 1) {
+                    foundItem = foundItems[i];
+                    for (pattern in patterns) {
+                        processSingleItemFoundByGrep(document, foundItem, item + '#' + i, pattern, patterns[pattern]);
+                    }
+                }
             }
         }
     }
