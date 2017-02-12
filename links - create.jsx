@@ -118,7 +118,7 @@
     if (app.documents.length > 0) {
         try {
             document = app.activeDocument;
-            
+
             removeHyperlinks(document);
 
             for (pattern in patterns) {
@@ -212,7 +212,8 @@
 
     function makeCopyrightsHyperlink(app, document) {
         var foundItems,
-            hyperlinkDestination,
+            k,
+            i,
             len,
             search = {
                 'Creative Commons Attribution License \\(CC BY 4\\.0\\)': 'http://creativecommons.org/licenses/by/4.0/'
