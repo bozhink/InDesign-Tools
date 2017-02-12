@@ -1,4 +1,4 @@
-﻿/* globals NothingEnum */
+﻿/* globals app, NothingEnum */
 (function (app) {
     'use strict';
 
