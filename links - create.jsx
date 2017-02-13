@@ -1,4 +1,4 @@
-﻿/* globals app, NothingEnum */
+/* globals app, NothingEnum */
 (function (app) {
     'use strict';
 
@@ -61,7 +61,7 @@
                 '(\\d+)': 'http://hol.osu.edu/spmInfo.html?id=OSUC%20$1'
             },
             'USNMENT': {
-                '(?:USNMENT)?([a-z0-9_]+)': 'http://hol.osu.edu/spmInfo.html?id=USNMENT$1'
+                '(?:USNMENT\\s*)?([a-z0-9_]+)': 'http://hol.osu.edu/spmInfo.html?id=USNMENT$1'
             },
             'CNC': {
                 '(?:CNC)?([0-9]+)': 'http://hol.osu.edu/spmInfo.html?id=CNC$1'
@@ -88,13 +88,13 @@
         pattern,
         harvestPatterns = {
             '(?i)\\bdoi:?\\s*\\d\\S+': {
-                '(?i)doi:?\\s*(\\d\\S+)': 'https://doi.org/$1'
+                '\\d\\S+': 'https://doi.org/$0'
             },
             '(?i)(https?|s?ftp)://\\S+': {
-                '.*': '$0'
+                '.+': '$0'
             },
             '(?i)(?<!://)(www)(\\S+)': {
-                '.*': 'http://$0'
+                '.+': 'http://$0'
             }
         },
         patterns = {
@@ -227,8 +227,8 @@
     }
 
     function makeLinksByHarvestPattern(app, document, grepHarvestPattern, patterns) {
-        var item, items = {},
-            foundItem, foundItems, numberOffoundItems, pattern, i;
+        var i, len, k, array = [], item, items = {},
+            foundItem, foundItems, numberOffoundItems, pattern;
 
         setGrepPreferences(app);
         app.findGrepPreferences.findWhat = grepHarvestPattern;
@@ -251,6 +251,15 @@
         }
 
         for (item in items) {
+            array.push(item);
+        }
+
+        array.sort(function (a, b) {
+            return a.length < b.length;
+        });
+
+        for (k = 0, len = array.length; k < len; k += 1) {
+            item = array[k];
             setTextPreferences(app);
             app.findTextPreferences.findWhat = item;
             foundItems = document.findText();
@@ -342,7 +351,6 @@
 
     function makeHyperlink(document, foundItem, url, seed) {
         var hyperlinkDestination, hyperlinkTextSource, hyperlink;
-
         try {
             hyperlinkDestination = document.hyperlinkURLDestinations.add(url, {
                 destinationURL: encodeURI(decodeURI(url))
